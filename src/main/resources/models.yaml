@@ -1,0 +1,10 @@
+- als1:
+    name: als1
+    rmse: 0.62
+    path: "s3:location/"
+- als2:
+    name: als2
+    rmse: 0.61
+    path: "s3:/location2"
+
+

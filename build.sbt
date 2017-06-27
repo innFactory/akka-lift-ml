@@ -2,7 +2,7 @@ lazy val akkaml = project
   .copy(id = "akkaml")
   .in(file("."))
 
-name := "akkaml"
+name := "akkaliftml"
 
 libraryDependencies ++= Vector(
   Library.swagger,
@@ -16,6 +16,7 @@ libraryDependencies ++= Vector(
   Library.akkaHttpCors,
   Library.akkaLog4j,
   Library.log4jCore,
-  Library.slf4jLog4jBridge
+  Library.slf4jLog4jBridge,
+  Library.spark
 )
 
