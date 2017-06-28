@@ -4,6 +4,7 @@ lazy val akkaml = project
 
 name := "akkaliftml"
 
+
 libraryDependencies ++= Vector(
   Library.swagger,
   Library.swaggerAkka,
@@ -17,6 +18,12 @@ libraryDependencies ++= Vector(
   Library.akkaLog4j,
   Library.log4jCore,
   Library.slf4jLog4jBridge,
-  Library.spark
+  Library.scopt,
+  Library.spark,
+  Library.sparkSQL,
+  Library.sparkMLlib,
+  Library.sparkHive
 )
 
+mainClass in (Compile, run) := Some("de.innfactory.akkaliftml.MLApp")
+mainClass in assembly := Some("de.innfactory.akkaliftml.MLApp")

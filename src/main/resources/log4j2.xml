@@ -22,7 +22,7 @@
         <Logger name="de.heikoseeberger.akkalog4j" level="info" additivity="false">
             <AppenderRef ref="FILE"/>
         </Logger>
-        <Root level="info">
+        <Root level="error">
             <AppenderRef ref="STDOUT"/>
         </Root>
     </Loggers>

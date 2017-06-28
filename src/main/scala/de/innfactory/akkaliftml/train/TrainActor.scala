@@ -1,39 +1,53 @@
 package de.innfactory.akkaliftml.train
+
 import akka.actor.{Actor, ActorLogging}
-import org.apache.spark.SparkConf
+
+import scala.concurrent.{Future, blocking}
+import scala.concurrent.ExecutionContext.Implicits.global
 
 object TrainActor {
+
   case class TrainWithModel(name: TrainingModel)
+
   case class TrainingResponse(responseMessage: String, train: Boolean)
+
   case class GetCurrentStatus()
+
 }
 
 class TrainActor extends Actor with ActorLogging {
+
   import TrainActor._
 
   var status = false
 
   def receive: Receive = {
     case TrainWithModel(model) => {
-      sender ! TrainingResponse(s"Training started with ${model.toString}", status)
-      status = true
+      if (status) {
+        sender ! TrainingResponse(s"Training is running, please wait!", status)
+      } else {
+        sender ! TrainingResponse(s"Training started with ${model.toString}", status)
+        status = true
+        Future {
+          blocking {
+            ALSTrainer.sparkJob(model)
+          }
+        }.map(model => {
+          print("got a new model")
+          print(model)
+          status = false
+        }).recoverWith {
+          case e: Exception => {
+            println("task failed")
+            status = false
+            Future.failed(e)
+          }
 
-//
-//      // initialise spark contex
-//      val conf = new SparkConf().setAppName("HelloWorld")
-//      val sc = new SparkContext(conf)
-//
-//      // do stuff
-//      println("************")
-//      println("************")
-//      println("Hello, world!")
-//      println("************")
-//      println("************")
-//
-//      // terminate spark context
-//      sc.stop()
+        }
 
+      }
     }
     case GetCurrentStatus => sender ! TrainingResponse(s"Training is running [${status}]", status)
   }
+
 }

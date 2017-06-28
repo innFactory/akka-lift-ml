@@ -10,6 +10,7 @@ object Version {
   final val swaggerAkka = "0.9.2"
   final val akkaHttpCors = "0.2.1"
   final val Spark = "2.1.1"
+  final val Scope = "3.6.0"
 }
 
 object Library {
@@ -25,6 +26,10 @@ object Library {
   val akkaLog4j = "de.heikoseeberger" %% "akka-log4j" % Version.AkkaLog4j
   val log4jCore = "org.apache.logging.log4j" % "log4j-core" % Version.Log4j
   val slf4jLog4jBridge = "org.apache.logging.log4j" % "log4j-slf4j-impl" % Version.Log4j
-  val spark = "org.apache.spark" %% "spark-core" % Version.Spark % "provided"
+  val spark = "org.apache.spark" %% "spark-core" % Version.Spark
+  val sparkSQL = "org.apache.spark" %% "spark-sql" % Version.Spark
+  val sparkMLlib = "org.apache.spark" %% "spark-mllib" % Version.Spark
+  val sparkHive = "org.apache.spark" %% "spark-hive" % Version.Spark
+  val scopt = "com.github.scopt" %% "scopt" % Version.Scope
 
 }

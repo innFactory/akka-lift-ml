@@ -25,7 +25,7 @@ class TrainService(trainer: ActorRef)(implicit executionContext: ExecutionContex
   import spray.json.DefaultJsonProtocol._
 
   implicit val trainingsRepsonseFormat = jsonFormat2(TrainingResponse)
-  implicit val trainingModel = jsonFormat9(TrainingModel)
+  implicit val trainingModel = jsonFormat10(TrainingModel)
 
   val route = trainWithModel ~ trainingStatus
 

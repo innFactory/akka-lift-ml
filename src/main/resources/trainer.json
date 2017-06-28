@@ -1,0 +1,18 @@
+{
+  "ratings": "s3n://innfustest/retail-raiting.csv",
+  "header": true,
+  "training": 0.2,
+  "validation": 0.4,
+  "test": 0.4,
+  "ranks": [
+    200
+  ],
+  "lambdas": [
+    0.1
+  ],
+  "iterations": [
+    10
+  ],
+  "model": "MatrixFactorizationModel",
+  "sparkMaster": "spark://localhost:7077"
+}
