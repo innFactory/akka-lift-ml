@@ -1,6 +1,7 @@
 package de.innfactory.akkaliftml.train
 
 import akka.actor.{Actor, ActorLogging}
+import org.apache.spark.mllib.recommendation.MatrixFactorizationModel
 
 import scala.concurrent.{Future, blocking}
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -13,6 +14,8 @@ object TrainActor {
 
   case class GetCurrentStatus()
 
+  case class SaveModel(rmse : Double, model : MatrixFactorizationModel)
+
 }
 
 class TrainActor extends Actor with ActorLogging {
@@ -20,8 +23,17 @@ class TrainActor extends Actor with ActorLogging {
   import TrainActor._
 
   var status = false
+  var modelRmse = Double.MaxValue
+  var currentModel : Option[MatrixFactorizationModel] = None
 
   def receive: Receive = {
+
+    case SaveModel(rmse, model) => {
+      if(rmse < modelRmse) {
+        currentModel = Some(model)
+        modelRmse = rmse
+      }
+    }
     case TrainWithModel(model) => {
       if (status) {
         sender ! TrainingResponse(s"Training is running, please wait!", status)
@@ -33,8 +45,9 @@ class TrainActor extends Actor with ActorLogging {
             ALSTrainer.sparkJob(model)
           }
         }.map(model => {
-          print("got a new model")
-          print(model)
+          print("got a new model with RMSE - ")
+          print(model._1)
+          self ! SaveModel(model._1, model._2)
           status = false
         }).recoverWith {
           case e: Exception => {
@@ -47,7 +60,7 @@ class TrainActor extends Actor with ActorLogging {
 
       }
     }
-    case GetCurrentStatus => sender ! TrainingResponse(s"Training is running [${status}]", status)
+    case GetCurrentStatus => sender ! TrainingResponse(s"Training is running [${status}] Current best RMSE (${modelRmse})", status)
   }
 
 }

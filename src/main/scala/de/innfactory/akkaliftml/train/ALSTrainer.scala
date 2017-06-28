@@ -5,7 +5,8 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.types.{DoubleType, IntegerType}
 
-import scala.concurrent.{blocking, Future}
+import scala.concurrent.{Future, blocking}
+import scala.reflect.io.Path
 
 
 object ALSTrainer extends App {
@@ -59,7 +60,11 @@ object ALSTrainer extends App {
     math.sqrt(predictionsAndRatings.map(x => (x._1 - x._2) * (x._1 - x._2)).reduce(_ + _) / n)
   }
 
-  def sparkJob(model: TrainingModel): MatrixFactorizationModel = {
+  def sparkJob(model: TrainingModel): (Double, MatrixFactorizationModel) = {
+    val path: Path = Path ("metastore_db/dbex.lck")
+    if(path.exists){
+      path.delete()
+    }
     println(model.sparkMaster)
     val warehouseLocation = "file:${system:user.dir}/spark-warehouse"
     val spark = SparkSession
@@ -69,6 +74,7 @@ object ALSTrainer extends App {
       .master(model.sparkMaster)
       .config("spark.sql.warehouse.dir", warehouseLocation)
       .config("spark.jars", "/Users/Tobias/Developer/akka-ml/target/scala-2.11/akkaliftml_2.11-0.1-SNAPSHOT.jar")
+      .config("spark.executor.memory", "4g")
       .enableHiveSupport()
       .getOrCreate()
 
@@ -105,6 +111,7 @@ object ALSTrainer extends App {
     val validation = splits(1).cache
     val test = splits(2).cache
 
+
     val numTraining = training.count()
     val numValidation = validation.count()
     val numTest = test.count()
@@ -140,11 +147,13 @@ object ALSTrainer extends App {
     println("The best model was trained with rank = " + bestRank + " and lambda = " + bestLambda + ", and numIter = " + bestNumIter + ", and its RMSE on the test set is " + testRmse + ".")
 
     // create a naive baseline and compare it with the best model
+    /* Buffer Overflow, when Spark Cluster has to less memory. Not interesting for me
     val meanRating = training.union(validation).map(_.rating).mean
     val baselineRmse =
       math.sqrt(test.map(x => (meanRating - x.rating) * (meanRating - x.rating)).mean)
     val improvement = (baselineRmse - testRmse) / baselineRmse * 100
     println("The best model improves the baseline by " + "%1.2f".format(improvement) + "%.")
+    */
 
 
     //val mlmodel = bestModel.get
@@ -155,6 +164,6 @@ object ALSTrainer extends App {
     val t1 = System.nanoTime()
     println(s"Elapsed time: ${(t1 - t0) / 1000000} ms")
     spark.stop()
-    bestModel.get
+    (bestValidationRmse, bestModel.get)
   }
 }
