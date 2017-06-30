@@ -60,7 +60,7 @@ object ALSTrainer extends App {
     math.sqrt(predictionsAndRatings.map(x => (x._1 - x._2) * (x._1 - x._2)).reduce(_ + _) / n)
   }
 
-  def sparkJob(model: TrainingModel): (Double, MatrixFactorizationModel) = {
+  def sparkJob(model: TrainingModel): (Double, String) = {
     val path: Path = Path ("metastore_db/dbex.lck")
     if(path.exists){
       path.delete()
@@ -163,7 +163,10 @@ object ALSTrainer extends App {
     println("<END TRAINING>")
     val t1 = System.nanoTime()
     println(s"Elapsed time: ${(t1 - t0) / 1000000} ms")
+    val savePath = "s3n://innfustest/" + "ALS" + System.nanoTime()
+    bestModel.get.save(spark.sparkContext, savePath)
+
     spark.stop()
-    (bestValidationRmse, bestModel.get)
+    (bestValidationRmse, savePath)
   }
 }
