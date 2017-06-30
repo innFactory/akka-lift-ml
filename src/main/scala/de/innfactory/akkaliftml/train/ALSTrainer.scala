@@ -60,18 +60,18 @@ object ALSTrainer extends App {
     math.sqrt(predictionsAndRatings.map(x => (x._1 - x._2) * (x._1 - x._2)).reduce(_ + _) / n)
   }
 
-  def sparkJob(model: TrainingModel): (Double, String) = {
+  def sparkJob(trainingModel: TrainingModel): (Double, String) = {
     val path: Path = Path ("metastore_db/dbex.lck")
     if(path.exists){
       path.delete()
     }
-    println(model.sparkMaster)
+    println(trainingModel.sparkMaster)
     val warehouseLocation = "file:${system:user.dir}/spark-warehouse"
     val spark = SparkSession
       .builder()
       .appName("ALSTRAINER1")
       //.master("spark://localhost:7077")
-      .master(model.sparkMaster)
+      .master(trainingModel.sparkMaster)
       .config("spark.sql.warehouse.dir", warehouseLocation)
       .config("spark.jars", "/Users/Tobias/Developer/akka-ml/target/scala-2.11/akkaliftml_2.11-0.1-SNAPSHOT.jar")
       .config("spark.executor.memory", "4g")
@@ -98,14 +98,14 @@ object ALSTrainer extends App {
       .option("header", "true")
       .option("mode", "DROPMALFORMED")
       .format("com.databricks.spark.csv")
-      .csv(model.ratings)
+      .csv(trainingModel.ratings)
       .withColumn("user", 'user.cast(IntegerType))
       .withColumn("product", 'product.cast(IntegerType))
       .withColumn("rating", 'rating.cast(DoubleType))
       .as[Rating].rdd
 
 
-    val splits = ratings.randomSplit(Array(model.training, model.validation, model.test), 0L)
+    val splits = ratings.randomSplit(Array(trainingModel.training, trainingModel.validation, trainingModel.test), 0L)
 
     val training = splits(0).cache
     val validation = splits(1).cache
@@ -116,9 +116,10 @@ object ALSTrainer extends App {
     val numValidation = validation.count()
     val numTest = test.count()
 
-    val ranks = model.ranks.toList
-    val lambdas = model.lambdas.toList
-    val numIters = model.iterations.toList
+    val ranks = trainingModel.ranks.toList
+    val lambdas = trainingModel.lambdas.toList
+    val numIters = trainingModel.iterations.toList
+    val alphas = trainingModel.alphas.toList
     var bestModel: Option[MatrixFactorizationModel] = None
     var bestValidationRmse = Double.MaxValue
     var bestRank = 0
@@ -127,8 +128,14 @@ object ALSTrainer extends App {
     for (
       rank <- ranks;
       lambda <- lambdas;
-      numIter <- numIters) {
-      val model = ALS.train(training, rank, numIter, lambda)
+      numIter <- numIters;
+      alpha <- alphas) {
+
+      val model = trainingModel.trainImplicit match {
+        case true => ALS.trainImplicit(training, rank, numIter, lambda, alpha)
+        case false => ALS.train(training, rank, numIter, lambda)
+      }
+
       val validationRmse = computeRmse(model, validation, numValidation)
       println("RMSE (validation) = " + validationRmse + " for the model trained with rank = "
         + rank + ", lambda = " + lambda + ", and numIter = " + numIter + ".")

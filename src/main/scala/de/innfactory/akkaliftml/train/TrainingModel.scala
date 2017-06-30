@@ -14,6 +14,8 @@ case class TrainingModel(
                           @(ApiModelProperty@field)(position = 6, value = "e.g [8, 16, 200]") ranks: Array[Int] = Array({200}),
                           @(ApiModelProperty@field)(position = 7, value = "e.g [0.2, 0.1]") lambdas: Array[Double] = Array({0.1}),
                           @(ApiModelProperty@field)(position = 8, value = "e.g [5,10,20,25]") iterations: Array[Int] = Array({10}),
-                          @(ApiModelProperty@field)(position = 9, example = "MatrixFactorizationModel") model : String = "MatrixFactorizationModel",
-                          @(ApiModelProperty@field)(position = 10, example = "local[*]") sparkMaster: String = "local[*]"
+                          @(ApiModelProperty@field)(position = 9, value = "e.g [0.1, 0.2]") alphas: Array[Double] = Array({0.1}),
+                          @(ApiModelProperty@field)(position = 10, example = "MatrixFactorizationModel") model : String = "MatrixFactorizationModel",
+                          @(ApiModelProperty@field)(position = 11, example = "local[*]") sparkMaster: String = "local[*]",
+                          @(ApiModelProperty@field)(position = 12, example = "false") trainImplicit : Boolean = false
                         )
