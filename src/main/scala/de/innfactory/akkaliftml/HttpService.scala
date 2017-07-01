@@ -1,24 +1,17 @@
 package de.innfactory.akkaliftml
 
-import javax.ws.rs.Path
-
 import akka.actor._
 import akka.http.scaladsl.Http
-import akka.http.scaladsl.model.{HttpResponse, StatusCodes}
-import akka.http.scaladsl.server.{Directives, RouteConcatenation}
+import akka.http.scaladsl.model.StatusCodes
+import akka.http.scaladsl.server.Directives
+import akka.pattern.pipe
 import akka.stream.{ActorMaterializer, Materializer}
-import akka.pattern.{ask, pipe}
 import akka.util.Timeout
 import ch.megard.akka.http.cors.scaladsl.CorsDirectives.cors
-import de.innfactory.akkaliftml.add.AddService
-import de.innfactory.akkaliftml.hello.HelloService
-import de.innfactory.akkaliftml.swagger.{SwaggerDocService, SwaggerUIService}
-import de.innfactory.akkaliftml.train.TrainService
+import de.innfactory.akkaliftml.als.AlsService
+import de.innfactory.akkaliftml.swagger.SwaggerDocService
 
 import scala.concurrent.ExecutionContext
-import io.swagger.annotations._
-
-import scala.util.{Failure, Success}
 
 object HttpService {
 
@@ -32,18 +25,14 @@ object HttpService {
              address: String,
              port: Int,
              internalTimeout: Timeout,
-             add: AddService,
-             hello: HelloService,
-             trainer: TrainService
+             alsService: AlsService
            ): Props =
-    Props(new HttpService(address, port, internalTimeout, add, hello, trainer))
+    Props(new HttpService(address, port, internalTimeout, alsService))
 
   private def route(
-                            httpService: ActorRef,
-                            add: AddService,
-                            hello: HelloService,
-                            trainer: TrainService,
-                            swaggerDocService: SwaggerDocService
+                     httpService: ActorRef,
+                     trainer: AlsService,
+                     swaggerDocService: SwaggerDocService
                           )(implicit ec: ExecutionContext, mat: Materializer) = {
     import Directives._
 
@@ -63,8 +52,6 @@ object HttpService {
 
     cors()(
         assets ~
-        add.route ~
-        hello.route ~
         trainer.route ~
         swaggerDocService.routes
     )
@@ -74,9 +61,7 @@ object HttpService {
 class HttpService(address: String,
                   port: Int,
                   internalTimeout: Timeout,
-                  add: AddService,
-                  hello: HelloService,
-                  trainer: TrainService)
+                  alsService: AlsService)
   extends Actor with ActorLogging {
 
   import HttpService._
@@ -86,7 +71,7 @@ class HttpService(address: String,
 
   Http(context.system)
     .bindAndHandle(
-      route(self, add, hello, trainer, new SwaggerDocService(address, port, context.system)),
+      route(self, alsService, new SwaggerDocService(address, port, context.system)),
       address,
       port)
     .pipeTo(self)

@@ -1,11 +1,11 @@
-package de.innfactory.akkaliftml.train
+package de.innfactory.akkaliftml.als
 
 import io.swagger.annotations.{ApiModel, ApiModelProperty}
 
 import scala.annotation.meta.field
 
-@ApiModel("TrainingModel")
-case class TrainingModel(
+@ApiModel("AlsModel")
+case class AlsModel(
                           @(ApiModelProperty@field)(position = 1) ratings: String = null,
                           @(ApiModelProperty@field)(position = 2, example="true") header: Boolean = true,
                           @(ApiModelProperty@field)(position = 3, example = "0.6") training: Double = 0.6,

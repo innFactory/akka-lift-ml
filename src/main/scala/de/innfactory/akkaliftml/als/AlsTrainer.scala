@@ -1,4 +1,4 @@
-package de.innfactory.akkaliftml.train
+package de.innfactory.akkaliftml.als
 
 import org.apache.spark.mllib.recommendation.{ALS, MatrixFactorizationModel, Rating}
 import org.apache.spark.rdd.RDD
@@ -9,8 +9,8 @@ import scala.concurrent.{Future, blocking}
 import scala.reflect.io.Path
 
 
-object ALSTrainer extends App {
-  val parser = new scopt.OptionParser[TrainingModel]("ALSTrainer") {
+object AlsTrainer extends App {
+  val parser = new scopt.OptionParser[AlsModel]("ALSTrainer") {
     head("ALSTrainer", "1.0")
     opt[String]('r', "ratings") required() action { (x, c) =>
       c.copy(ratings = x)
@@ -45,7 +45,7 @@ object ALSTrainer extends App {
 
   }
   // parser.parse returns Option[C]
-  parser.parse(args, TrainingModel()) map { trainingModel =>
+  parser.parse(args, AlsModel()) map { trainingModel =>
     print(trainingModel)
     sparkJob(trainingModel)
   } getOrElse {
@@ -60,7 +60,7 @@ object ALSTrainer extends App {
     math.sqrt(predictionsAndRatings.map(x => (x._1 - x._2) * (x._1 - x._2)).reduce(_ + _) / n)
   }
 
-  def sparkJob(trainingModel: TrainingModel): (Double, String) = {
+  def sparkJob(trainingModel: AlsModel): (Double, String) = {
     val path: Path = Path ("metastore_db/dbex.lck")
     if(path.exists){
       path.delete()

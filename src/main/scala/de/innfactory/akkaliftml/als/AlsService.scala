@@ -1,33 +1,30 @@
-package de.innfactory.akkaliftml.train
+package de.innfactory.akkaliftml.als
 
-import scala.concurrent.{ExecutionContext, Future}
-import akka.actor.ActorRef
-import akka.util.Timeout
-import akka.http.scaladsl.model.Uri.Path.Segment
-import akka.http.scaladsl.server.Directives
-import io.swagger.annotations._
 import javax.ws.rs.Path
 
-import de.innfactory.akkaliftml
+import akka.actor.ActorRef
+import akka.http.scaladsl.server.Directives
+import akka.util.Timeout
 import de.innfactory.akkaliftml.DefaultJsonFormats
-import de.innfactory.akkaliftml.hello.HelloActor.{Greeting, Hello}
-import de.innfactory.akkaliftml.train.TrainActor._
+import de.innfactory.akkaliftml.als.AlsActor._
+import io.swagger.annotations._
 import org.apache.spark.mllib.recommendation.Rating
+
+import scala.concurrent.ExecutionContext
 
 @Path("/trainer")
 @Api(value = "/trainer", produces = "application/json")
-class TrainService(trainer: ActorRef)(implicit executionContext: ExecutionContext)
+class AlsService(trainer: ActorRef)(implicit executionContext: ExecutionContext)
   extends Directives with DefaultJsonFormats {
 
   import akka.pattern.ask
+
   import scala.concurrent.duration._
 
   implicit val timeout = Timeout(100.seconds)
 
-  import spray.json.DefaultJsonProtocol._
-
   implicit val trainingsRepsonseFormat = jsonFormat2(TrainingResponse)
-  implicit val trainingModel = jsonFormat12(TrainingModel)
+  implicit val trainingModel = jsonFormat12(AlsModel)
   implicit val rating = jsonFormat3(Rating)
   implicit val recommendationsModel = jsonFormat1(Recommendations)
 
@@ -50,7 +47,7 @@ class TrainService(trainer: ActorRef)(implicit executionContext: ExecutionContex
 
   @ApiOperation(value = "Train a Model with a Model", notes = "", nickname = "trainWithModel", httpMethod = "POST")
   @ApiImplicitParams(Array(
-    new ApiImplicitParam(value = "TrainingModel Object with training information", required = true, dataType = "de.innfactory.akkaliftml.train.TrainingModel", paramType = "body")
+    new ApiImplicitParam(value = "TrainingModel Object with training information", required = true, dataType = "de.innfactory.akkaliftml.als.AlsModel", paramType = "body")
   ))
   @ApiResponses(Array(
     new ApiResponse(code = 200, message = "Training Successfully started", response = classOf[TrainingResponse]),
@@ -59,7 +56,7 @@ class TrainService(trainer: ActorRef)(implicit executionContext: ExecutionContex
   def trainWithModel =
     path("trainer") {
       post {
-        entity(as[TrainingModel]) { item =>
+        entity(as[AlsModel]) { item =>
           complete {
             (trainer ? TrainWithModel(item)).mapTo[TrainingResponse]
           }

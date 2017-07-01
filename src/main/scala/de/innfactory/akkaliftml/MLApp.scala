@@ -1,9 +1,7 @@
 package de.innfactory.akkaliftml
 
 import akka.actor._
-import de.innfactory.akkaliftml.add.{AddActor, AddService}
-import de.innfactory.akkaliftml.hello.{HelloActor, HelloService}
-import de.innfactory.akkaliftml.train.{TrainActor, TrainService}
+import de.innfactory.akkaliftml.als.{AlsActor, AlsService}
 
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
@@ -19,13 +17,11 @@ object MLApp {
 }
 
 class Master extends Actor with ActorLogging with ActorSettings {
-  override val supervisorStrategy = SupervisorStrategy.stoppingStrategy
+  override val supervisorStrategy = SupervisorStrategy.restart
   private implicit val _ = context.dispatcher
 
-  private val addService = createAddService()
-  private val helloService = createGreetingActor()
-  private val trainService = createTrainService()
-  context.watch(createHttpService(addService, helloService))
+  private val alsService = createAlsService()
+  context.watch(createHttpService(alsService))
 
   log.info("Up and running")
 
@@ -34,24 +30,15 @@ class Master extends Actor with ActorLogging with ActorSettings {
   }
 
 
-  protected def createGreetingActor(): HelloService = {
-    new HelloService(context.actorOf(Props[HelloActor]))
+  protected def createAlsService(): AlsService = {
+    new AlsService(context.actorOf(Props[AlsActor]))
   }
 
 
-  protected def createAddService(): AddService = {
-    new AddService(context.actorOf(Props[AddActor]))
-  }
-
-  protected def createTrainService(): TrainService = {
-    new TrainService(context.actorOf(Props[TrainActor]))
-  }
-
-
-  protected def createHttpService(addService: AddService, helloSerivce: HelloService): ActorRef = {
+  protected def createHttpService(trainService: AlsService): ActorRef = {
     import settings.httpService._
     context
-      .actorOf(HttpService.props(address, port, selfTimeout, addService, helloSerivce, trainService), HttpService.Name)
+      .actorOf(HttpService.props(address, port, selfTimeout, trainService), HttpService.Name)
   }
 
   protected def onTerminated(actor: ActorRef): Unit = {

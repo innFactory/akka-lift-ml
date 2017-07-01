@@ -1,4 +1,4 @@
-package de.innfactory.akkaliftml.train
+package de.innfactory.akkaliftml.als
 
 import akka.actor.{Actor, ActorLogging}
 import org.apache.spark.mllib.recommendation.{MatrixFactorizationModel, Rating}
@@ -8,9 +8,9 @@ import org.apache.spark.sql.SparkSession
 import scala.concurrent.{Future, blocking}
 import scala.concurrent.ExecutionContext.Implicits.global
 
-object TrainActor {
+object AlsActor {
 
-  case class TrainWithModel(name: TrainingModel)
+  case class TrainWithModel(name: AlsModel)
 
   case class TrainingResponse(responseMessage: String, train: Boolean)
 
@@ -26,9 +26,9 @@ object TrainActor {
 
 }
 
-class TrainActor extends Actor with ActorLogging {
+class AlsActor extends Actor with ActorLogging {
 
-  import TrainActor._
+  import AlsActor._
   var spark : Option[SparkSession] = None
   var status = false
   var modelRmse = Double.MaxValue
@@ -99,7 +99,7 @@ class TrainActor extends Actor with ActorLogging {
         status = true
         Future {
           blocking {
-            ALSTrainer.sparkJob(model)
+            AlsTrainer.sparkJob(model)
           }
         }.map(model => {
           println("got a new model with RMSE - ")
