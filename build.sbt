@@ -26,4 +26,6 @@ libraryDependencies ++= Vector(
 )
 
 mainClass in (Compile, run) := Some("de.innfactory.akkaliftml.MLApp")
-mainClass in assembly := Some("de.innfactory.akkaliftml.MLApp")
+
+enablePlugins(JavaAppPackaging)
+enablePlugins(DockerPlugin)

@@ -110,6 +110,7 @@ class AlsActor extends Actor with ActorLogging {
         }).recoverWith {
           case e: Exception => {
             println("task failed")
+            log.error("training failed: {}", e)
             status = false
             Future.failed(e)
           }

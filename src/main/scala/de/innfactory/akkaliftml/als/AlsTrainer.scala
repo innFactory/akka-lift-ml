@@ -1,5 +1,6 @@
 package de.innfactory.akkaliftml.als
 
+import akka.actor.ActorLogging
 import org.apache.spark.mllib.recommendation.{ALS, MatrixFactorizationModel, Rating}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.SparkSession
@@ -66,7 +67,8 @@ object AlsTrainer extends App {
       path.delete()
     }
     println(trainingModel.sparkMaster)
-    val warehouseLocation = "file:${system:user.dir}/spark-warehouse"
+    val warehouseLocation = "./spark-warehouse"
+    println(s"warehouse ${warehouseLocation}")
     val spark = SparkSession
       .builder()
       .appName("ALSTRAINER1")
@@ -79,7 +81,7 @@ object AlsTrainer extends App {
       .getOrCreate()
 
     import spark.implicits._
-    println("<START TRAINING>")
+    println("Start Training")
     val t0 = System.nanoTime()
     //spark.sparkContext.hadoopConfiguration.set("fs.s3n.awsAccessKeyId", "AKIAJKXDHJ6VWOCIELMA")
     //spark.sparkContext.hadoopConfiguration.set("fs.s3n.awsSecretAccessKey ", "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")
@@ -93,6 +95,7 @@ object AlsTrainer extends App {
     //ones above this may be deprecated?
     hadoopConf.set("fs.s3n.awsAccessKeyId", myAccessKey)
     hadoopConf.set("fs.s3n.awsSecretAccessKey", mySecretKey)
+    println("Hadoop Config was set.")
 
     val ratings = spark.read
       .option("header", "true")
@@ -103,6 +106,7 @@ object AlsTrainer extends App {
       .withColumn("product", 'product.cast(IntegerType))
       .withColumn("rating", 'rating.cast(DoubleType))
       .as[Rating].rdd
+    println("Ratings loaded.")
 
 
     val splits = ratings.randomSplit(Array(trainingModel.training, trainingModel.validation, trainingModel.test), 0L)
@@ -110,7 +114,7 @@ object AlsTrainer extends App {
     val training = splits(0).cache
     val validation = splits(1).cache
     val test = splits(2).cache
-
+    println("Data splitted.")
 
     val numTraining = training.count()
     val numValidation = validation.count()
@@ -125,11 +129,13 @@ object AlsTrainer extends App {
     var bestRank = 0
     var bestLambda = -1.0
     var bestNumIter = -1
+    println("will begin trainings...")
     for (
       rank <- ranks;
       lambda <- lambdas;
       numIter <- numIters;
       alpha <- alphas) {
+      println("now training with rank = " + rank + ", lambda = " + lambda + ", and numIter = " + numIter + ".")
 
       val model = trainingModel.trainImplicit match {
         case true => ALS.trainImplicit(training, rank, numIter, lambda, alpha)
@@ -146,8 +152,10 @@ object AlsTrainer extends App {
         bestLambda = lambda
         bestNumIter = numIter
       }
+      println("training iteration done!")
     }
 
+    println("evalute the best model on the test set")
     // evaluate the best model on the test set
     val testRmse = computeRmse(bestModel.get, test, numTest)
 
@@ -167,13 +175,16 @@ object AlsTrainer extends App {
     //mlmodel.predict(17908, 20)
     //model.save(sc, "/storage/data/modelals2")
 
-    println("<END TRAINING>")
+    println("training finished")
     val t1 = System.nanoTime()
     println(s"Elapsed time: ${(t1 - t0) / 1000000} ms")
     val savePath = "s3n://innfustest/" + "ALS" + System.nanoTime()
     bestModel.get.save(spark.sparkContext, savePath)
-
+    println("model saved")
+    val t2 = System.nanoTime()
+    println(s"Elapsed time: ${(t2 - t1) / 1000000} ms")
     spark.stop()
+    println("spark stopped")
     (bestValidationRmse, savePath)
   }
 }

@@ -65,7 +65,7 @@ class AlsService(trainer: ActorRef)(implicit executionContext: ExecutionContext)
     }
 
   @Path("/{userId}")
-  @ApiOperation(value = "Train a Model with a Model", notes = "", nickname = "recommendForUser", httpMethod = "GET")
+  @ApiOperation(value = "Get Top Recommendations for a user.", notes = "", nickname = "recommendForUser", httpMethod = "GET")
   @ApiImplicitParams(Array(
     new ApiImplicitParam(name = "count", value = "recommendation count", required = false, dataType = "integer", paramType = "query"),
     new ApiImplicitParam(name = "userId", value = "user id for recommendations", required = true, dataType = "integer", paramType = "path")

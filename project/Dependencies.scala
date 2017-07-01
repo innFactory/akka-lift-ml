@@ -9,7 +9,7 @@ object Version {
   final val swagger = "1.5.14"
   final val swaggerAkka = "0.9.2"
   final val akkaHttpCors = "0.2.1"
-  final val Spark = "2.1.1"
+  final val Spark = "2.1.0"
   final val Scope = "3.6.0"
 }
 

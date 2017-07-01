@@ -31,7 +31,7 @@ object HttpService {
 
   private def route(
                      httpService: ActorRef,
-                     trainer: AlsService,
+                     alsService: AlsService,
                      swaggerDocService: SwaggerDocService
                           )(implicit ec: ExecutionContext, mat: Materializer) = {
     import Directives._
@@ -52,7 +52,7 @@ object HttpService {
 
     cors()(
         assets ~
-        trainer.route ~
+        alsService.route ~
         swaggerDocService.routes
     )
   }
