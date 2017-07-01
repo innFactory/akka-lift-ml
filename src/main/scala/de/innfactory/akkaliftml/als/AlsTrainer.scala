@@ -77,7 +77,7 @@ object AlsTrainer extends App {
       .config("spark.sql.warehouse.dir", warehouseLocation)
       .config("spark.jars", "/Users/Tobias/Developer/akka-ml/target/scala-2.11/akkaliftml_2.11-0.1-SNAPSHOT.jar")
       .config("spark.executor.memory", "4g")
-      .enableHiveSupport()
+      //.enableHiveSupport()
       .getOrCreate()
 
     import spark.implicits._
