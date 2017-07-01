@@ -17,7 +17,7 @@ object MLApp {
 }
 
 class Master extends Actor with ActorLogging with ActorSettings {
-  override val supervisorStrategy = SupervisorStrategy.restart
+  override val supervisorStrategy = SupervisorStrategy.defaultStrategy
   private implicit val _ = context.dispatcher
 
   private val alsService = createAlsService()

@@ -12,8 +12,8 @@ import org.apache.spark.mllib.recommendation.Rating
 
 import scala.concurrent.ExecutionContext
 
-@Path("/trainer")
-@Api(value = "/trainer", produces = "application/json")
+@Path("/als")
+@Api(value = "/als", produces = "application/json")
 class AlsService(trainer: ActorRef)(implicit executionContext: ExecutionContext)
   extends Directives with DefaultJsonFormats {
 
@@ -37,7 +37,7 @@ class AlsService(trainer: ActorRef)(implicit executionContext: ExecutionContext)
     new ApiResponse(code = 500, message = "Internal server error")
   ))
   def trainingStatus =
-    path("trainer") {
+    path("als") {
       get {
         complete {
           (trainer ? GetCurrentStatus).mapTo[TrainingResponse]
@@ -54,7 +54,7 @@ class AlsService(trainer: ActorRef)(implicit executionContext: ExecutionContext)
     new ApiResponse(code = 500, message = "Internal server error")
   ))
   def trainWithModel =
-    path("trainer") {
+    path("als") {
       post {
         entity(as[AlsModel]) { item =>
           complete {
@@ -75,7 +75,7 @@ class AlsService(trainer: ActorRef)(implicit executionContext: ExecutionContext)
     new ApiResponse(code = 500, message = "Internal server error")
   ))
   def recommendForUser =
-    path("trainer" / Segment) { userId =>
+    path("als" / Segment) { userId =>
       parameters('count.as[Int] ? 20) { count =>
         get {
           complete {
