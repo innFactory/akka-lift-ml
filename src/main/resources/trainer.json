@@ -1,5 +1,24 @@
 [
+//Masterpräsentation --> Fast check local internet first!!!
 
+  {
+    "ratings": "/Users/Tobias/Developer/zeppelin-notebooks/datasets/retail-raiting.csv",
+    "training": 0.1,
+    "validation": 0.4,
+    "test": 0.4,
+    "ranks": [
+      20
+    ],
+    "lambdas": [
+      0.3
+    ],
+    "iterations": [
+      5
+    ]
+  }
+
+,
+//
 {
   "ratings": "s3n://innfustest/retail-raiting.csv",
   "header": true,

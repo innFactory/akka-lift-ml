@@ -15,6 +15,12 @@ object AlsTrainingActor {
 
 }
 
+class AvgCollector(val tot: Double, val cnt: Int = 1) extends Serializable {
+  def ++(v: Double) = new AvgCollector(tot + v, cnt + 1)
+  def combine(that: AvgCollector) = new AvgCollector(tot + that.tot, cnt + that.cnt)
+  def avg = if (cnt > 0) tot / cnt else 0.0
+}
+
 class AlsTrainingActor extends Actor with ActorLogging {
 
   override def receive: Receive = {
@@ -94,12 +100,24 @@ class AlsTrainingActor extends Actor with ActorLogging {
       .withColumn("product", 'product.cast(IntegerType))
       .withColumn("rating", 'rating.cast(DoubleType))
       .as[Rating].rdd
+
     println("Ratings loaded.")
 
 
     val splits = ratings.randomSplit(Array(trainingModel.training.getOrElse(0.8), trainingModel.validation.getOrElse(0.1), trainingModel.test.getOrElse(0.1)), 0L)
 
-    val training = splits(0).cache
+    val trainingCold = splits(0).cache
+    println("calculates default values for cold start...")
+    val best = trainingCold
+      .map(r => (r.product, r.rating))
+      .aggregateByKey( new AvgCollector(0.0,0) )(_ ++ _, _ combine _ )
+      .map{ case (k,v) => (k, v.avg) }
+      .sortBy(_._2, false).take(5)
+      .map(m => Rating(0,m._1,m._2))
+    println("added value to train data")
+    val training = trainingCold ++ spark.sparkContext.parallelize(best.toList)
+
+
     val validation = splits(1).cache
     val test = splits(2).cache
     println("Data splitted.")
