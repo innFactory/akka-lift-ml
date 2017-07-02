@@ -1,12 +1,9 @@
 package de.innfactory.akkaliftml.als
 
-import akka.actor.{Actor, ActorLogging}
+import akka.actor.{Actor, ActorLogging, Props}
 import org.apache.spark.mllib.recommendation.{MatrixFactorizationModel, Rating}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.SparkSession
-
-import scala.concurrent.{Future, blocking}
-import scala.concurrent.ExecutionContext.Implicits.global
 
 object AlsActor {
 
@@ -24,6 +21,8 @@ object AlsActor {
 
   case class InitSpark()
 
+  case class UpdateStatus(bool: Boolean)
+
 }
 
 class AlsActor extends Actor with ActorLogging {
@@ -35,6 +34,8 @@ class AlsActor extends Actor with ActorLogging {
   var currentModelPath : String = ""
   var currentModel : Option[MatrixFactorizationModel] = None
   var currentRecommendations : Option[RDD[(Int,Array[Rating])]] = None
+
+  val trainer = context.actorOf(Props[AlsTrainingActor])
 
   def initSpark() = {
     spark = Some(SparkSession
@@ -91,30 +92,18 @@ class AlsActor extends Actor with ActorLogging {
         modelRmse = rmse
       }
     }
+
+    case UpdateStatus(update) => {
+      println(s"change training status to $update")
+      status = update
+    }
+
     case TrainWithModel(model) => {
       if (status) {
         sender ! TrainingResponse(s"Training is running, please wait!", status)
       } else {
-        sender ! TrainingResponse(s"Training started with ${model.toString}", status)
-        status = true
-        Future {
-          blocking {
-            AlsTrainer.sparkJob(model)
-          }
-        }.map(model => {
-          println("got a new model with RMSE - ")
-          println(model._1)
-          println("Save new model")
-          self ! SaveModel(model._1, model._2)
-          status = false
-        }).recoverWith {
-          case e: Exception => {
-            println("task failed")
-            log.error("training failed: {}", e)
-            status = false
-            Future.failed(e)
-          }
-        }
+        sender ! TrainingResponse(s"Training started with ${model.toString}", true)
+        trainer ! TrainWithModel(model)
       }
     }
     case GetCurrentStatus => sender ! TrainingResponse(s"Training is running [${status}] Current best RMSE (${modelRmse})", status)

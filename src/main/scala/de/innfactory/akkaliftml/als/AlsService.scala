@@ -57,6 +57,7 @@ class AlsService(trainer: ActorRef)(implicit executionContext: ExecutionContext)
     path("als") {
       post {
         entity(as[AlsModel]) { item =>
+
           complete {
             (trainer ? TrainWithModel(item)).mapTo[TrainingResponse]
           }

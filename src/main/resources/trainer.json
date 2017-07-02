@@ -15,6 +15,10 @@
   "iterations": [
     10
   ],
+  "trainImplicit": false,
+  "alphas" : [
+    1
+  ],
   "model": "MatrixFactorizationModel",
   "sparkMaster": "spark://localhost:7077"
 },
