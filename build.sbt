@@ -22,8 +22,12 @@ libraryDependencies ++= Vector(
   Library.spark,
   Library.sparkSQL,
   Library.sparkMLlib,
-  Library.sparkHive
+  Library.sparkHive,
+  TestLibrary.akkaHttpTestkit,
+  TestLibrary.akkaTestkit,
+  TestLibrary.scalaTest
 )
+
 
 mainClass in (Compile, run) := Some("de.innfactory.akkaliftml.MLApp")
 

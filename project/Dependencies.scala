@@ -33,3 +33,15 @@ object Library {
   val scopt = "com.github.scopt" %% "scopt" % Version.Scope
 
 }
+
+object TestVersion {
+  final val akkaTestkit = "2.5.3"
+  final val akkaHttpTestkit =  "10.0.9"
+  final val scalaTest = "3.0.1"
+}
+
+object TestLibrary {
+  val akkaTestkit = "com.typesafe.akka" %% "akka-testkit" % TestVersion.akkaTestkit
+  val akkaHttpTestkit = "com.typesafe.akka" %% "akka-http-testkit" % TestVersion.akkaHttpTestkit
+  val scalaTest = "org.scalatest" %% "scalatest" % TestVersion.scalaTest % "test"
+}

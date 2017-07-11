@@ -4,16 +4,12 @@
     <Appenders>
         <Console name="STDOUT">
             <PatternLayout>
-                <pattern>%date{ISO8601} level=[%level] logger=[%logger] akkaSource=[%X{akkaSource}]
-                    sourceThread=[%X{sourceThread}] mdc=[ticket-#%X{ticketNumber}: %X{ticketDesc}] - msg=[%msg]%n----%n
-                </pattern>
+                <pattern>[%level] [%date{ISO8601}] [%logger] [akkaSource=%X{akkaSource}][sourceThread=%X{sourceThread}] [mdc=ticket-#%X{ticketNumber}: %X{ticketDesc}] %msg%n</pattern>
             </PatternLayout>
         </Console>
         <File name="FILE" fileName="${sys:java.io.tmpdir}/akkaml.log" append="false">
             <PatternLayout>
-                <pattern>%date{ISO8601} level=[%level] logger=[%logger] akkaSource=[%X{akkaSource}]
-                    sourceThread=[%X{sourceThread}] mdc=[ticket-#%X{ticketNumber}: %X{ticketDesc}] - msg=[%msg]%n----%n
-                </pattern>
+                <pattern>%date{ISO8601} level=[%level] logger=[%logger] akkaSource=[%X{akkaSource}] sourceThread=[%X{sourceThread}] mdc=[ticket-#%X{ticketNumber}: %X{ticketDesc}] - msg=[%msg]%n</pattern>
             </PatternLayout>
         </File>
     </Appenders>
@@ -22,7 +18,7 @@
         <Logger name="de.heikoseeberger.akkalog4j" level="info" additivity="false">
             <AppenderRef ref="FILE"/>
         </Logger>
-        <Root level="error">
+        <Root level="debug">
             <AppenderRef ref="STDOUT"/>
         </Root>
     </Loggers>

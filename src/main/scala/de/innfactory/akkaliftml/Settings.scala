@@ -14,15 +14,23 @@ class Settings(system: ExtendedActorSystem) extends Extension {
     val selfTimeout: FiniteDuration = getDuration("http-service.self-timeout")
   }
 
-  object models {
-    val fs = system.settings.config.getConfig("models.fs")
-    val location = system.settings.config.getConfig("models.location")
+  object fs {
+    val target = mlConfig.getString("fs.target")
+    val ratingsFormat = mlConfig.getString("fs.ratings-format")
+    val loadLastOnStartup = mlConfig.getString("fs.load-last-on-startup")
+  }
+
+  object aws {
+    val location = mlConfig.getString("aws.location")
+    val accessKeyId = mlConfig.getString("aws.access-key-id")
+    val secretAccessKey = mlConfig.getString("aws.secret-access-key")
   }
 
   object spark {
-    val master = system.settings.config.getConfig("spark.master")
-    val port = system.settings.config.getConfig("spark.port")
-    val appName = system.settings.config.getConfig("spark.app-name")
+    val defaultMaster = mlConfig.getString("spark.default-master")
+    val port = mlConfig.getInt("spark.port")
+    val appName = mlConfig.getString("spark.app-name")
+    val executorMemory = mlConfig.getString("spark.executor-memory")
   }
 
   private val mlConfig = system.settings.config.getConfig("mlconfig")

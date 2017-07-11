@@ -1,6 +1,7 @@
 package de.innfactory.akkaliftml.als
 
 import akka.actor.{Actor, ActorLogging}
+import de.innfactory.akkaliftml.ActorSettings
 import de.innfactory.akkaliftml.als.AlsActor.{SaveModel, TrainWithModel, UpdateStatus}
 import org.apache.spark.mllib.recommendation.{ALS, MatrixFactorizationModel, Rating}
 import org.apache.spark.rdd.RDD
@@ -21,7 +22,7 @@ class AvgCollector(val tot: Double, val cnt: Int = 1) extends Serializable {
   def avg = if (cnt > 0) tot / cnt else 0.0
 }
 
-class AlsTrainingActor extends Actor with ActorLogging {
+class AlsTrainingActor extends Actor with ActorLogging with ActorSettings {
 
   override def receive: Receive = {
     case TrainWithModel(model) => {
@@ -32,16 +33,13 @@ class AlsTrainingActor extends Actor with ActorLogging {
           sparkJob(model)
         }
       }.map(model => {
-        println("got a new model with RMSE - ")
-        println(model._1)
-        println("Save new model")
+        log.info(s"Got a new model with RMSE ${model._1}")
         origSender ! SaveModel(model._1, model._2)
         origSender ! UpdateStatus(false)
       }).recoverWith {
         case e: Exception => {
           origSender ! UpdateStatus(false)
-          println("Training failed...")
-          log.error("Exception: {}", e)
+          log.error("Training failed with Exception: {}", e)
           Future.failed(e)
         }
       }
@@ -56,71 +54,57 @@ class AlsTrainingActor extends Actor with ActorLogging {
   }
 
   def sparkJob(trainingModel: AlsModel): (Double, String) = {
-    val path: Path = Path ("metastore_db/dbex.lck")
-    if(path.exists){
-      path.delete()
-    }
-    println(trainingModel.sparkMaster)
-    val warehouseLocation = "./spark-warehouse"
-    println(s"warehouse ${warehouseLocation}")
+    log.info(s"Training started on ${trainingModel.sparkMaster.getOrElse("local")}")
     val spark = SparkSession
       .builder()
-      .appName("ALSTRAINER1")
-      //.master("spark://localhost:7077")
+      .appName(s"${settings.spark.appName}Trainer")
       .master(trainingModel.sparkMaster.getOrElse("local[*]"))
-      .config("spark.sql.warehouse.dir", warehouseLocation)
       .config("spark.jars", "/Users/Tobias/Developer/akka-ml/target/scala-2.11/akkaliftml_2.11-0.1-SNAPSHOT.jar")
-      .config("spark.executor.memory", "4g")
-      //.enableHiveSupport()
+      .config("spark.executor.memory", s"${settings.spark.executorMemory}")
       .getOrCreate()
 
     import spark.implicits._
-    println("Start Training")
+
     val t0 = System.nanoTime()
-    //spark.sparkContext.hadoopConfiguration.set("fs.s3n.awsAccessKeyId", "AKIAJKXDHJ6VWOCIELMA")
-    //spark.sparkContext.hadoopConfiguration.set("fs.s3n.awsSecretAccessKey ", "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")
-    val myAccessKey = "AKIAJKXDHJ6VWOCIELMA"
-    val mySecretKey = "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"
+
+    log.info("Set values to hadoop config")
     val hadoopConf = spark.sparkContext.hadoopConfiguration
     hadoopConf.set("fs.s3.impl", "org.apache.hadoop.fs.s3native.NativeS3FileSystem")
-    hadoopConf.set("fs.s3.awsAccessKeyId", myAccessKey)
-    hadoopConf.set("fs.s3.awsSecretAccessKey", mySecretKey)
-
-    //ones above this may be deprecated?
-    hadoopConf.set("fs.s3n.awsAccessKeyId", myAccessKey)
-    hadoopConf.set("fs.s3n.awsSecretAccessKey", mySecretKey)
-    println("Hadoop Config was set.")
+    hadoopConf.set("fs.s3.awsAccessKeyId", settings.aws.accessKeyId)
+    hadoopConf.set("fs.s3.awsSecretAccessKey", settings.aws.secretAccessKey)
+    hadoopConf.set("fs.s3n.awsAccessKeyId", settings.aws.accessKeyId)
+    hadoopConf.set("fs.s3n.awsSecretAccessKey", settings.aws.secretAccessKey)
 
     val ratings = spark.read
-      .option("header", trainingModel.header.getOrElse(true).toString) //TODO FIXME NOT WORKING WITH FALSE
+      .option("header", true)
       .option("mode", "DROPMALFORMED")
-      .format("com.databricks.spark.csv")
+      .format(settings.fs.ratingsFormat)
       .csv(trainingModel.ratings)
       .withColumn("user", 'user.cast(IntegerType))
       .withColumn("product", 'product.cast(IntegerType))
       .withColumn("rating", 'rating.cast(DoubleType))
       .as[Rating].rdd
 
-    println("Ratings loaded.")
+    log.info("Ratings loaded.")
 
 
     val splits = ratings.randomSplit(Array(trainingModel.training.getOrElse(0.8), trainingModel.validation.getOrElse(0.1), trainingModel.test.getOrElse(0.1)), 0L)
 
     val trainingCold = splits(0).cache
-    println("calculates default values for cold start...")
+    log.info("calculating best default values for cold starting users.")
     val best = trainingCold
       .map(r => (r.product, r.rating))
       .aggregateByKey( new AvgCollector(0.0,0) )(_ ++ _, _ combine _ )
       .map{ case (k,v) => (k, v.avg) }
       .sortBy(_._2, false).take(5)
       .map(m => Rating(0,m._1,m._2))
-    println("added value to train data")
+    log.info("add value for cold starting users to the training data")
     val training = trainingCold ++ spark.sparkContext.parallelize(best.toList)
 
 
     val validation = splits(1).cache
     val test = splits(2).cache
-    println("Data splitted.")
+    log.info("Data was splitted")
 
     val numTraining = training.count()
     val numValidation = validation.count()
@@ -135,13 +119,13 @@ class AlsTrainingActor extends Actor with ActorLogging {
     var bestRank = 0
     var bestLambda = -1.0
     var bestNumIter = -1
-    println("will begin trainings...")
+    log.info("training with given parameters will start.")
     for (
       rank <- ranks;
       lambda <- lambdas;
       numIter <- numIters;
       alpha <- alphas) {
-      println("now training with rank = " + rank + ", lambda = " + lambda + ", and numIter = " + numIter + ".")
+      log.info(s"now training with rank = $rank, lambda = $lambda, and numIter = $numIter")
 
       val model = trainingModel.trainImplicit.getOrElse(false) match {
         case true => ALS.trainImplicit(training, rank, numIter, lambda, alpha)
@@ -149,8 +133,7 @@ class AlsTrainingActor extends Actor with ActorLogging {
       }
 
       val validationRmse = computeRmse(model, validation, numValidation)
-      println("RMSE (validation) = " + validationRmse + " for the model trained with rank = "
-        + rank + ", lambda = " + lambda + ", and numIter = " + numIter + ".")
+      log.info(s"RMSE (validation) = $validationRmse for the model trained with rank = $rank, lambda = $lambda, and numIter = $numIter ")
       if (validationRmse < bestValidationRmse) {
         bestModel = Some(model)
         bestValidationRmse = validationRmse
@@ -158,39 +141,26 @@ class AlsTrainingActor extends Actor with ActorLogging {
         bestLambda = lambda
         bestNumIter = numIter
       }
-      println("training iteration done!")
+      log.info("training iteration done!")
     }
 
-    println("evalute the best model on the test set")
+    log.info("evalute the best model on the test set")
     // evaluate the best model on the test set
     val testRmse = computeRmse(bestModel.get, test, numTest)
 
-    println("The best model was trained with rank = " + bestRank + " and lambda = " + bestLambda + ", and numIter = " + bestNumIter + ", and its RMSE on the test set is " + testRmse + ".")
-
-    // create a naive baseline and compare it with the best model
-    /* Buffer Overflow, when Spark Cluster has to less memory. Not interesting for me
-    val meanRating = training.union(validation).map(_.rating).mean
-    val baselineRmse =
-      math.sqrt(test.map(x => (meanRating - x.rating) * (meanRating - x.rating)).mean)
-    val improvement = (baselineRmse - testRmse) / baselineRmse * 100
-    println("The best model improves the baseline by " + "%1.2f".format(improvement) + "%.")
-    */
+    log.info(s"The best model was trained with rank = $bestRank and lambda = $bestLambda, and numIter = $bestNumIter, and its RMSE on the test set is $testRmse.")
 
 
-    //val mlmodel = bestModel.get
-    //mlmodel.predict(17908, 20)
-    //model.save(sc, "/storage/data/modelals2")
-
-    println("training finished")
+    log.info("training finished")
     val t1 = System.nanoTime()
-    println(s"Elapsed time: ${(t1 - t0) / 1000000} ms")
-    val savePath = "s3n://innfustest/" + "ALS" + System.nanoTime()
+    log.info(s"Elapsed time for training: ${(t1 - t0) / 1000000} ms")
+    val savePath = s"${settings.aws.location}ALS${System.nanoTime()}"
     bestModel.get.save(spark.sparkContext, savePath)
-    println("model saved")
+    log.info("model saved")
     val t2 = System.nanoTime()
-    println(s"Elapsed time: ${(t2 - t1) / 1000000} ms")
+    log.info(s"Elapsed time for saving: ${(t2 - t1) / 1000000} ms")
     spark.stop()
-    println("spark stopped")
+    log.info("Spark stopped")
     (bestValidationRmse, savePath)
   }
 

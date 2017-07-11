@@ -24,7 +24,7 @@ class AlsService(trainer: ActorRef)(implicit executionContext: ExecutionContext)
   implicit val timeout = Timeout(100.seconds)
 
   implicit val trainingsRepsonseFormat = jsonFormat2(TrainingResponse)
-  implicit val trainingModel = jsonFormat12(AlsModel)
+  implicit val trainingModel = jsonFormat10(AlsModel)
   implicit val rating = jsonFormat3(Rating)
   implicit val recommendationsModel = jsonFormat1(Recommendations)
 
