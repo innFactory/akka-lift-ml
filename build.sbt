@@ -1,3 +1,6 @@
+import sbt.Keys._
+import sbt._
+
 lazy val akkaml = project
   .copy(id = "akkaml")
   .in(file("."))
@@ -31,5 +34,24 @@ libraryDependencies ++= Vector(
 
 mainClass in (Compile, run) := Some("de.innfactory.akkaliftml.MLApp")
 
-enablePlugins(JavaAppPackaging)
-enablePlugins(DockerPlugin)
+
+scalacOptions ++= Seq(
+  "-unchecked",
+  "-deprecation",
+  "-feature",
+  "-Xfatal-warnings")
+
+dockerfile in docker := {
+  val artifact: File = assembly.value
+  val artifactTargetPath = s"/app/${artifact.name}"
+
+  new Dockerfile {
+    from("java")
+    add(artifact, artifactTargetPath)
+    entryPoint(
+      "java",
+      "-jar",
+      artifactTargetPath
+    )
+  }
+}
