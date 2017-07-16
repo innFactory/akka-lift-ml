@@ -9,7 +9,8 @@ object Version {
   final val swagger = "1.5.14"
   final val swaggerAkka = "0.9.2"
   final val akkaHttpCors = "0.2.1"
-  final val Spark = "2.1.0"
+  final val Spark = "2.2.0"
+  final val Hadoop = "2.6.0"
   final val Scope = "3.6.0"
 }
 
@@ -30,6 +31,8 @@ object Library {
   val sparkSQL = "org.apache.spark" %% "spark-sql" % Version.Spark
   val sparkMLlib = "org.apache.spark" %% "spark-mllib" % Version.Spark
   val sparkHive = "org.apache.spark" %% "spark-hive" % Version.Spark
+  val hadoop = "org.apache.hadoop" % "hadoop-client" % Version.Hadoop
+  val hadoopAWS = "org.apache.hadoop" % "hadoop-aws" % Version.Hadoop
   val scopt = "com.github.scopt" %% "scopt" % Version.Scope
 
 }

@@ -55,7 +55,6 @@ class AlsTrainingActor extends Actor with ActorLogging with ActorSettings {
 
   def sparkJob(trainingModel: AlsModel): (Double, String) = {
     log.info(s"Training started on ${trainingModel.sparkMaster.getOrElse("local")}")
-    println(">>"+settings.spark.jar)
     val spark = SparkSession
       .builder()
       .appName(s"${settings.spark.appName}Trainer")

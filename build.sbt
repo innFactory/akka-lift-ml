@@ -26,6 +26,8 @@ libraryDependencies ++= Vector(
   Library.sparkSQL,
   Library.sparkMLlib,
   Library.sparkHive,
+  Library.hadoop,
+  Library.hadoopAWS,
   TestLibrary.akkaHttpTestkit,
   TestLibrary.akkaTestkit,
   TestLibrary.scalaTest
