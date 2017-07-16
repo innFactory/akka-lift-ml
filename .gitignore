@@ -2,3 +2,4 @@
 *.log
 
 metastore_db/*
+/application2.conf
