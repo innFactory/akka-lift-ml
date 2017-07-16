@@ -1,4 +1,8 @@
 # akka-lift-ml Microservice #
+[![Version](https://img.shields.io/badge/License-Apache2-blue.svg)]()
+[![Version](https://img.shields.io/badge/Version-0.1-brightgreen.svg)]()
+[![Version](https://img.shields.io/badge/Status-alpha-red.svg)]()
+[![Version](https://img.shields.io/badge/Status-alpha-red.svg)]()
 
 Repository for an akka microservice that lift the trained spark ml algorithms as a actorsystem with http endpoints.
 
@@ -12,6 +16,7 @@ To build your own system you need sbt and scala.
 - Collaborative Filtering with ALS (Alternating-Least-Squares)
 
 ## QuickStart Guide ##
+- Prepare your data with 3 columns user,product,retaing - sample can be found in test resources (retail-raiting.csv)
 - If you want to train remote and not on your local machine, first start your Spark Cluster ([Spark Cluster with 1x Master & 3x worker via Docker](https://github.com/innFactory/docker/tree/master/spark-master-worker))
 - Checkout the source code from github
 - Copy application.example.conf to application.example.conf (resources folder)
