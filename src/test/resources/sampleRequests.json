@@ -19,7 +19,6 @@
 //
 {
   "ratings": "s3n://innfustest/retail-raiting.csv",
-  "header": true,
   "training": 0.2,
   "validation": 0.4,
   "test": 0.4,
@@ -36,14 +35,12 @@
   "alphas" : [
     1
   ],
-  "model": "MatrixFactorizationModel",
   "sparkMaster": "spark://localhost:7077"
 },
 
 //implicit training with alpha 0.1
 {
   "ratings": "s3n://innfustest/retail-raiting.csv",
-  "header": true,
   "training": 0.9,
   "validation": 0.05,
   "test": 0.05,
@@ -60,7 +57,6 @@
     0.5
   ],
   "trainImplicit" : true,
-  "model": "MatrixFactorizationModel",
   "sparkMaster": "spark://localhost:7077"
 }
 
