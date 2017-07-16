@@ -2,7 +2,7 @@ package de.innfactory.akkaliftml.als
 
 import akka.actor.{Actor, ActorLogging}
 import de.innfactory.akkaliftml.ActorSettings
-import de.innfactory.akkaliftml.als.AlsActor.{SaveModel, TrainWithModel, UpdateStatus}
+import de.innfactory.akkaliftml.als.AlsActor.{LoadTrainedModel, TrainWithModel, UpdateStatus}
 import org.apache.spark.mllib.recommendation.{ALS, MatrixFactorizationModel, Rating}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.SparkSession
@@ -34,7 +34,7 @@ class AlsTrainingActor extends Actor with ActorLogging with ActorSettings {
         }
       }.map(model => {
         log.info(s"Got a new model with RMSE ${model._1}")
-        origSender ! SaveModel(model._1, model._2)
+        origSender ! LoadTrainedModel(model._1, model._2)
         origSender ! UpdateStatus(false)
       }).recoverWith {
         case e: Exception => {
@@ -55,11 +55,12 @@ class AlsTrainingActor extends Actor with ActorLogging with ActorSettings {
 
   def sparkJob(trainingModel: AlsModel): (Double, String) = {
     log.info(s"Training started on ${trainingModel.sparkMaster.getOrElse("local")}")
+    println(">>"+settings.spark.jar)
     val spark = SparkSession
       .builder()
       .appName(s"${settings.spark.appName}Trainer")
       .master(trainingModel.sparkMaster.getOrElse("local[*]"))
-      .config("spark.jars", "/Users/Tobias/Developer/akka-ml/target/scala-2.11/akkaliftml_2.11-0.1-SNAPSHOT.jar")
+      .config("spark.jars", s"${settings.spark.jar}")
       .config("spark.executor.memory", s"${settings.spark.executorMemory}")
       .getOrCreate()
 

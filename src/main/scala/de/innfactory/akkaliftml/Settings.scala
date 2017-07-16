@@ -1,12 +1,21 @@
 package de.innfactory.akkaliftml
 
-import akka.actor.{ Actor, ExtendedActorSystem, Extension, ExtensionKey }
+import akka.actor.{Actor, ActorSystem, ExtendedActorSystem, Extension, ExtensionId, ExtensionIdProvider}
 
-import scala.concurrent.duration.{ FiniteDuration, MILLISECONDS }
+import scala.concurrent.duration._
 
-object Settings extends ExtensionKey[Settings]
+//object Settings with Extension[Settings]
 
-class Settings(system: ExtendedActorSystem) extends Extension {
+object Settings extends ExtensionId[SettingsImpl] with ExtensionIdProvider {
+
+  override def lookup = Settings
+
+  override def createExtension(system: ExtendedActorSystem) = new SettingsImpl(system)
+
+  override def get(system: ActorSystem): SettingsImpl = super.get(system)
+}
+
+class SettingsImpl(system: ExtendedActorSystem) extends Extension {
 
   object httpService {
     val address: String = mlConfig.getString("http-service.address")
@@ -31,6 +40,7 @@ class Settings(system: ExtendedActorSystem) extends Extension {
     val port = mlConfig.getInt("spark.port")
     val appName = mlConfig.getString("spark.app-name")
     val executorMemory = mlConfig.getString("spark.executor-memory")
+    val jar = mlConfig.getString("spark.jar")
   }
 
   private val mlConfig = system.settings.config.getConfig("mlconfig")
@@ -40,5 +50,5 @@ class Settings(system: ExtendedActorSystem) extends Extension {
 
 trait ActorSettings {
   this: Actor =>
-  val settings: Settings = Settings(context.system)
+  val settings = Settings(context.system)
 }

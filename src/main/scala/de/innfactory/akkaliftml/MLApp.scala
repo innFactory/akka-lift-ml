@@ -1,6 +1,7 @@
 package de.innfactory.akkaliftml
 
 import akka.actor._
+import de.innfactory.akkaliftml.als.AlsActor.Init
 import de.innfactory.akkaliftml.als.{AlsActor, AlsService}
 
 import scala.concurrent.Await
@@ -29,11 +30,11 @@ class Master extends Actor with ActorLogging with ActorSettings {
     case Terminated(actor) => onTerminated(actor)
   }
 
-
   protected def createAlsService(): AlsService = {
-    new AlsService(context.actorOf(Props[AlsActor]))
+    val alsActor = context.actorOf(Props[AlsActor])
+    alsActor.tell(Init(), context.sender())
+    new AlsService(alsActor)
   }
-
 
   protected def createHttpService(trainService: AlsService): ActorRef = {
     import settings.httpService._

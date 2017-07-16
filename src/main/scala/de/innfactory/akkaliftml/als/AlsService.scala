@@ -31,9 +31,9 @@ class AlsService(trainer: ActorRef)(implicit executionContext: ExecutionContext)
   val route = trainWithModel ~ trainingStatus ~ recommendForUser
 
 
-  @ApiOperation(value = "Get the status of current training", notes = "", nickname = "trainingStatus", httpMethod = "GET")
+  @ApiOperation(value = "Get the training status of als service", notes = "", nickname = "trainingStatusALS", httpMethod = "GET")
   @ApiResponses(Array(
-    new ApiResponse(code = 200, message = "Current Training Status", response = classOf[TrainingResponse]),
+    new ApiResponse(code = 200, message = "Current Training Status of ALS Trainer", response = classOf[TrainingResponse]),
     new ApiResponse(code = 500, message = "Internal server error")
   ))
   def trainingStatus =
@@ -45,7 +45,7 @@ class AlsService(trainer: ActorRef)(implicit executionContext: ExecutionContext)
       }
     }
 
-  @ApiOperation(value = "Train a Model with a Model", notes = "", nickname = "trainWithModel", httpMethod = "POST")
+  @ApiOperation(value = "Train a ALSModel with a Model Information", notes = "", nickname = "trainWithModel", httpMethod = "POST")
   @ApiImplicitParams(Array(
     new ApiImplicitParam(value = "TrainingModel Object with training information", required = true, dataType = "de.innfactory.akkaliftml.als.AlsModel", paramType = "body")
   ))
