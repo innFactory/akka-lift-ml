@@ -35,7 +35,15 @@ libraryDependencies ++= Vector(
 
 
 mainClass in (Compile, run) := Some("de.innfactory.akkaliftml.MLApp")
+mainClass in assembly := Some("de.innfactory.akkaliftml.MLApp")
 
+assemblyMergeStrategy in assembly := {
+  case PathList("reference.conf") => MergeStrategy.concat
+  case "application.conf" => MergeStrategy.concat
+  case x if Assembly.isConfigFile(x) => MergeStrategy.concat
+  case PathList("META-INF", xs @ _*) => MergeStrategy.discard
+  case x => MergeStrategy.first
+}
 
 scalacOptions ++= Seq(
   "-unchecked",
