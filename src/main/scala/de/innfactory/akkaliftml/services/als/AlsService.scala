@@ -57,6 +57,7 @@ class AlsService()(implicit executionContext: ExecutionContext) extends Persiste
 
   def receive: Receive = {
     case Init() => {
+      sender ! TrainingResponse("Reloading started, please wait!", false)
       getCurrentModelFromDatabase().map { alsTraining =>
         val latest = alsTraining.head
         log.info("Load model from data")

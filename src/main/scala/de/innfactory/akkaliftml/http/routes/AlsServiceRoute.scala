@@ -23,7 +23,7 @@ class AlsServiceRoute(alsService: ActorRef)(implicit executionContext: Execution
 
   implicit val timeout = Timeout(alsTimeout)
 
-  val route = trainWithModel ~ trainingStatus ~ recommendForUser
+  val route = trainWithModel ~ trainingStatus ~ recommendForUser ~ reload
 
   @ApiOperation(value = "Get the training status of als service", notes = "", nickname = "trainingStatusALS", httpMethod = "GET")
   @ApiResponses(Array(
@@ -39,9 +39,23 @@ class AlsServiceRoute(alsService: ActorRef)(implicit executionContext: Execution
       }
     }
 
+  @ApiOperation(value = "Reload latest model from database", notes = "", nickname = "reloadALS", httpMethod = "PUT")
+  @ApiResponses(Array(
+    new ApiResponse(code = 200, message = "Started reloading the latest als model", response = classOf[TrainingResponse]),
+    new ApiResponse(code = 500, message = "Internal server error")
+  ))
+  def reload =
+    path("als") {
+    put {
+      complete {
+        (alsService ? Init()).mapTo[TrainingResponse]
+      }
+    }
+  }
+
   @ApiOperation(value = "Train a ALSModel with a Model Information", notes = "", nickname = "trainWithModel", httpMethod = "POST")
   @ApiImplicitParams(Array(
-    new ApiImplicitParam(value = "TrainingModel Object with training information", required = true, dataType = "de.innfactory.akkaliftml.als.AlsModel", paramType = "body")
+    new ApiImplicitParam(value = "TrainingModel Object with training information", required = true, dataType = "de.innfactory.akkaliftml.models.AlsModel", paramType = "body")
   ))
   @ApiResponses(Array(
     new ApiResponse(code = 200, message = "Training Successfully started", response = classOf[TrainingResponse]),
