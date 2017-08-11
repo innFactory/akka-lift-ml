@@ -1,6 +1,8 @@
 akka-lift-ml
 =========================
 
+[![travis-ci.org](https://travis-ci.org/innFactory/akka-lift-ml.svg?branch=master)](https://travis-ci.org/innFactory/akka-lift-ml)
+[![codecov.io](https://img.shields.io/codecov/c/github/innFactory/akka-lift-ml/master.svg?style=flat)](https://codecov.io/github/innFactory/akka-lift-ml)
 [![Version](https://img.shields.io/badge/License-Apache2-blue.svg)]()
 [![Version](https://img.shields.io/badge/Version-0.2-brightgreen.svg)]()
 [![Version](https://img.shields.io/badge/Status-beta-red.svg)]()
