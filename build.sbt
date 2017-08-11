@@ -1,67 +1,52 @@
-import sbt.Keys._
-import sbt._
 
-lazy val akkaml = project
-  .copy(id = "akkaml")
-  .in(file("."))
+name := "akka-lift-ml"
+organization := "de.innfactory"
+version := "1.0.0"
+scalaVersion := Version.Scala
 
-name := "akkaliftml"
+libraryDependencies ++= {
+  Seq(
+    Library.swagger,
+    Library.swaggerAkka,
+    Library.akkaActor,
+    Library.akkaHttp,
+    Library.akkaHttpCors,
+    Library.akkaHttpCirce,
+    Library.akkaStream,
+    Library.log4jCore,
+    Library.slf4jLog4jBridge,
+    Library.akkaLog4j,
+    Library.slick,
+    Library.slickHikaricp,
+    Library.postgresql,
+    Library.slickRepo,
+    Library.flywaydb,
+    Library.nimbusds,
+    Library.circeCore,
+    Library.circeGeneric,
+    Library.circeParser,
+    Library.spark,
+    Library.sparkSQL,
+    Library.sparkMLlib,
+    Library.sparkHive,
+    Library.hadoop,
+    Library.hadoopAWS,
+    TestLibrary.akkaTestkit,
+    TestLibrary.akkaHttpTestkit,
+    TestLibrary.postgresqlEmbedded,
+    TestLibrary.scalaTest
+  )
+}
 
+Revolver.settings
+enablePlugins(JavaAppPackaging)
+enablePlugins(DockerPlugin)
 
-libraryDependencies ++= Vector(
-  Library.swagger,
-  Library.swaggerAkka,
-  Library.akka,
-  Library.akkaPersistence,
-  Library.akkaHttpSprayJson,
-  Library.akkaHttpCors,
-  Library.akkaActor,
-  Library.akkaStream,
-  Library.akkaHttpCors,
-  Library.akkaLog4j,
-  Library.log4jCore,
-  Library.slf4jLog4jBridge,
-  Library.scopt,
-  Library.spark,
-  Library.sparkSQL,
-  Library.sparkMLlib,
-  Library.sparkHive,
-  Library.hadoop,
-  Library.hadoopAWS,
-  TestLibrary.akkaHttpTestkit,
-  TestLibrary.akkaTestkit,
-  TestLibrary.scalaTest
+javaOptions in Universal ++= Seq(
+  "-J-Xmx4g",
+  "-J-Xms2g"
 )
 
 
-mainClass in (Compile, run) := Some("de.innfactory.akkaliftml.MLApp")
-mainClass in assembly := Some("de.innfactory.akkaliftml.MLApp")
-
-assemblyMergeStrategy in assembly := {
-  case PathList("reference.conf") => MergeStrategy.concat
-  case "application.conf" => MergeStrategy.concat
-  case x if Assembly.isConfigFile(x) => MergeStrategy.concat
-  case PathList("META-INF", xs @ _*) => MergeStrategy.discard
-  case x => MergeStrategy.first
-}
-
-scalacOptions ++= Seq(
-  "-unchecked",
-  "-deprecation",
-  "-feature",
-  "-Xfatal-warnings")
-
-dockerfile in docker := {
-  val artifact: File = assembly.value
-  val artifactTargetPath = s"/app/${artifact.name}"
-
-  new Dockerfile {
-    from("java")
-    add(artifact, artifactTargetPath)
-    entryPoint(
-      "java",
-      "-jar",
-      artifactTargetPath
-    )
-  }
-}
+dockerExposedPorts := Seq(8283)
+dockerEntrypoint := Seq("bin/%s" format executableScriptName.value, "-Dconfig.resource=docker.conf")

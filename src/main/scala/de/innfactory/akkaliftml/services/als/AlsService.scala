@@ -1,17 +1,18 @@
-package de.innfactory.akkaliftml.als
+package de.innfactory.akkaliftml.services.als
 
 import akka.actor.{Actor, ActorLogging, Props}
-import de.innfactory.akkaliftml.ActorSettings
-import de.innfactory.akkaliftml.util.MLPreferences
+import akka.util.Timeout
+import de.innfactory.akkaliftml.models.{AlsModel, AlsTraining}
+import de.innfactory.akkaliftml.models.db.AlsRepository
+import de.innfactory.akkaliftml.utils.{Configuration, Persistence, PersistenceActor}
 import org.apache.spark.mllib.recommendation.{MatrixFactorizationModel, Rating}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.SparkSession
 
-import scala.concurrent.Future
-import scala.concurrent.blocking
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.{ExecutionContext, Future, blocking}
 
-object AlsActor {
+object AlsService {
 
   case class TrainWithModel(name: AlsModel)
 
@@ -31,11 +32,15 @@ object AlsActor {
 
   case class Init()
 
+  def props(implicit executionContext: ExecutionContext) = Props(new AlsService()(executionContext))
+
 }
 
-class AlsActor extends Actor with ActorLogging with ActorSettings {
+class AlsService()(implicit executionContext: ExecutionContext) extends PersistenceActor with ActorLogging with Configuration {
 
-  import AlsActor._
+  val alsRepository = new AlsRepository()
+
+  import AlsService._
 
   var spark: Option[SparkSession] = None
   var status = false
@@ -46,13 +51,16 @@ class AlsActor extends Actor with ActorLogging with ActorSettings {
 
   val trainer = context.actorOf(Props[AlsTrainingActor])
 
+  def getCurrentModelFromDatabase(): Future[Seq[AlsTraining]] = {
+    executeOperation(alsRepository.findLatestAlsModel())
+  }
+
   def receive: Receive = {
     case Init() => {
-      val model = MLPreferences.getCurrentALSModel()
-      log.info(s"init als trainer with pref >> $model")
-      model match {
-        case "" | "test" => log.info("no dataset found")
-        case alsModel: String => loadDataFromModel(alsModel)
+      getCurrentModelFromDatabase().map { alsTraining =>
+        val latest = alsTraining.head
+        log.info("Load model from data")
+        loadDataFromModel(latest.path, latest.rmse)
       }
     }
     case RecommendProductsForUsers(user, count) => {
@@ -94,15 +102,16 @@ class AlsActor extends Actor with ActorLogging with ActorSettings {
     val newSpark = SparkSession
       .builder()
       .master("local[*]")
-      .appName(settings.spark.appName)
+      .config("spark.driver.memory", s"${sparkDriverMemory}")
+      .appName(sparkAppName)
       .getOrCreate()
 
     val hadoopConf = newSpark.sparkContext.hadoopConfiguration
     hadoopConf.set("fs.s3.impl", "org.apache.hadoop.fs.s3native.NativeS3FileSystem")
-    hadoopConf.set("fs.s3.awsAccessKeyId", settings.aws.accessKeyId)
-    hadoopConf.set("fs.s3.awsSecretAccessKey", settings.aws.secretAccessKey)
-    hadoopConf.set("fs.s3n.awsAccessKeyId", settings.aws.accessKeyId)
-    hadoopConf.set("fs.s3n.awsSecretAccessKey", settings.aws.secretAccessKey)
+    hadoopConf.set("fs.s3.awsAccessKeyId", awsAccessKeyId)
+    hadoopConf.set("fs.s3.awsSecretAccessKey", awsSecretAccessKey)
+    hadoopConf.set("fs.s3n.awsAccessKeyId", awsAccessKeyId)
+    hadoopConf.set("fs.s3n.awsSecretAccessKey", awsSecretAccessKey)
     newSpark
   }
 
@@ -122,7 +131,9 @@ class AlsActor extends Actor with ActorLogging with ActorSettings {
         newCurrentRecommendations.get.collect()
         val newModelRmse = rmse
 
-        MLPreferences.setCurrentALSModel(newCurrentModelPath)
+
+        val alsTraining = AlsTraining(None, newCurrentModelPath, newModelRmse)
+        executeOperation(alsRepository.save(alsTraining))
 
         currentModelPath = newCurrentModelPath
         currentModel = newCurrentModel

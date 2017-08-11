@@ -1,35 +1,29 @@
-package de.innfactory.akkaliftml.als
+package de.innfactory.akkaliftml.http.routes
+
 
 import javax.ws.rs.Path
 
 import akka.actor.ActorRef
-import akka.http.scaladsl.server.Directives
-import akka.util.Timeout
-import de.innfactory.akkaliftml.DefaultJsonFormats
-import de.innfactory.akkaliftml.als.AlsActor._
+import akka.http.scaladsl.server.Directives._
+import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport
+import de.innfactory.akkaliftml.http.SecurityDirectives
+import de.innfactory.akkaliftml.services.als.AlsService._
+import de.innfactory.akkaliftml.models.AlsModel
+import io.circe.generic.auto._
 import io.swagger.annotations._
-import org.apache.spark.mllib.recommendation.Rating
+import akka.pattern.ask
+import akka.util.Timeout
+import de.innfactory.akkaliftml.utils.Configuration
 
 import scala.concurrent.ExecutionContext
 
-@Path("/als")
+@Path("als")
 @Api(value = "/als", produces = "application/json")
-class AlsService(trainer: ActorRef)(implicit executionContext: ExecutionContext)
-  extends Directives with DefaultJsonFormats {
+class AlsServiceRoute(alsService: ActorRef)(implicit executionContext: ExecutionContext) extends FailFastCirceSupport with Configuration {
 
-  import akka.pattern.ask
-
-  import scala.concurrent.duration._
-
-  implicit val timeout = Timeout(100.seconds)
-
-  implicit val trainingsRepsonseFormat = jsonFormat2(TrainingResponse)
-  implicit val trainingModel = jsonFormat10(AlsModel)
-  implicit val rating = jsonFormat3(Rating)
-  implicit val recommendationsModel = jsonFormat1(Recommendations)
+  implicit val timeout = Timeout(alsTimeout)
 
   val route = trainWithModel ~ trainingStatus ~ recommendForUser
-
 
   @ApiOperation(value = "Get the training status of als service", notes = "", nickname = "trainingStatusALS", httpMethod = "GET")
   @ApiResponses(Array(
@@ -40,7 +34,7 @@ class AlsService(trainer: ActorRef)(implicit executionContext: ExecutionContext)
     path("als") {
       get {
         complete {
-          (trainer ? GetCurrentStatus).mapTo[TrainingResponse]
+          (alsService ? GetCurrentStatus).mapTo[TrainingResponse]
         }
       }
     }
@@ -57,9 +51,8 @@ class AlsService(trainer: ActorRef)(implicit executionContext: ExecutionContext)
     path("als") {
       post {
         entity(as[AlsModel]) { item =>
-
           complete {
-            (trainer ? TrainWithModel(item)).mapTo[TrainingResponse]
+            (alsService ? TrainWithModel(item)).mapTo[TrainingResponse]
           }
         }
       }
@@ -80,11 +73,11 @@ class AlsService(trainer: ActorRef)(implicit executionContext: ExecutionContext)
       parameters('count.as[Int] ? 20) { count =>
         get {
           complete {
-            (trainer ? RecommendProductsForUsers(userId.toInt, count)).mapTo[Recommendations]
+            (alsService ? RecommendProductsForUsers(userId.toInt, count)).mapTo[Recommendations]
           }
         }
       }
     }
 
-}
 
+}

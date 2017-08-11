@@ -1,8 +1,9 @@
-package de.innfactory.akkaliftml.als
+package de.innfactory.akkaliftml.services.als
 
 import akka.actor.{Actor, ActorLogging}
-import de.innfactory.akkaliftml.ActorSettings
-import de.innfactory.akkaliftml.als.AlsActor.{LoadTrainedModel, TrainWithModel, UpdateStatus}
+import de.innfactory.akkaliftml.models.AlsModel
+import de.innfactory.akkaliftml.services.als.AlsService.{LoadTrainedModel, TrainWithModel, UpdateStatus}
+import de.innfactory.akkaliftml.utils.Configuration
 import org.apache.spark.mllib.recommendation.{ALS, MatrixFactorizationModel, Rating}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.SparkSession
@@ -10,7 +11,6 @@ import org.apache.spark.sql.types.{DoubleType, IntegerType}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{Future, blocking}
-import scala.reflect.io.Path
 
 object AlsTrainingActor {
 
@@ -22,7 +22,7 @@ class AvgCollector(val tot: Double, val cnt: Int = 1) extends Serializable {
   def avg = if (cnt > 0) tot / cnt else 0.0
 }
 
-class AlsTrainingActor extends Actor with ActorLogging with ActorSettings {
+class AlsTrainingActor extends Actor with ActorLogging with Configuration {
 
   override def receive: Receive = {
     case TrainWithModel(model) => {
@@ -57,10 +57,10 @@ class AlsTrainingActor extends Actor with ActorLogging with ActorSettings {
     log.info(s"Training started on ${trainingModel.sparkMaster.getOrElse("local")}")
     val spark = SparkSession
       .builder()
-      .appName(s"${settings.spark.appName}Trainer")
+      .appName(s"${sparkAppName}Trainer")
       .master(trainingModel.sparkMaster.getOrElse("local[*]"))
-      .config("spark.jars", s"${settings.spark.jar}")
-      .config("spark.executor.memory", s"${settings.spark.executorMemory}")
+      .config("spark.jars", s"${sparkJar}")
+      .config("spark.executor.memory", s"${sparkExecutorMemory}")
       .getOrCreate()
 
     import spark.implicits._
@@ -70,15 +70,15 @@ class AlsTrainingActor extends Actor with ActorLogging with ActorSettings {
     log.info("Set values to hadoop config")
     val hadoopConf = spark.sparkContext.hadoopConfiguration
     hadoopConf.set("fs.s3.impl", "org.apache.hadoop.fs.s3native.NativeS3FileSystem")
-    hadoopConf.set("fs.s3.awsAccessKeyId", settings.aws.accessKeyId)
-    hadoopConf.set("fs.s3.awsSecretAccessKey", settings.aws.secretAccessKey)
-    hadoopConf.set("fs.s3n.awsAccessKeyId", settings.aws.accessKeyId)
-    hadoopConf.set("fs.s3n.awsSecretAccessKey", settings.aws.secretAccessKey)
+    hadoopConf.set("fs.s3.awsAccessKeyId", awsAccessKeyId)
+    hadoopConf.set("fs.s3.awsSecretAccessKey", awsSecretAccessKey)
+    hadoopConf.set("fs.s3n.awsAccessKeyId", awsAccessKeyId)
+    hadoopConf.set("fs.s3n.awsSecretAccessKey", awsSecretAccessKey)
 
     val ratings = spark.read
       .option("header", true)
       .option("mode", "DROPMALFORMED")
-      .format(settings.fs.ratingsFormat)
+      .format(fsRatingsFormat)
       .csv(trainingModel.ratings)
       .withColumn("user", 'user.cast(IntegerType))
       .withColumn("product", 'product.cast(IntegerType))
@@ -154,7 +154,7 @@ class AlsTrainingActor extends Actor with ActorLogging with ActorSettings {
     log.info("training finished")
     val t1 = System.nanoTime()
     log.info(s"Elapsed time for training: ${(t1 - t0) / 1000000} ms")
-    val savePath = s"${settings.aws.location}ALS${System.nanoTime()}"
+    val savePath = s"${awsLocation}ALS${System.nanoTime()}"
     bestModel.get.save(spark.sparkContext, savePath)
     log.info("model saved")
     val t2 = System.nanoTime()
@@ -165,3 +165,4 @@ class AlsTrainingActor extends Actor with ActorLogging with ActorSettings {
   }
 
 }
+

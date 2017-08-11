@@ -1,13 +1,12 @@
-package de.innfactory.akkaliftml.swagger
+package de.innfactory.akkaliftml.http.routes
 
 import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.Directives
-import de.innfactory.akkaliftml.DefaultJsonFormats
 
 import scala.concurrent.ExecutionContext
 
-class SwaggerUIService()(implicit executionContext: ExecutionContext)
-  extends Directives with DefaultJsonFormats {
+class SwaggerUIRoute()(implicit executionContext: ExecutionContext)
+  extends Directives {
 
 
   def assets = pathPrefix("swagger") {
@@ -16,6 +15,6 @@ class SwaggerUIService()(implicit executionContext: ExecutionContext)
 
   val route = assets
 
-
 }
+
 
